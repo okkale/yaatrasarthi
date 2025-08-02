@@ -166,6 +166,17 @@ const authenticateToken = async (req: any, res: any, next: any) => {
   }
 }
 
+// Update CORS configuration
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://your-netlify-app.netlify.app', 'http://localhost:3000']
+    : 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
+
 // Auth routes
 app.post('/api/auth/register', [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
@@ -179,6 +190,8 @@ app.post('/api/auth/register', [
     }
 
     const { name, email, password } = req.body
+
+
 
     // Check if user already exists
     const existingUser = await User.findOne({ email })
