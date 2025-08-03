@@ -47,9 +47,15 @@ This guide explains how to deploy the YaatraSarthi application with the frontend
 ### For Backend (Render/Heroku)
 
 In your backend deployment service, you need to set these environment variables:
-- `MONGODB_URI`: Your MongoDB connection string
-- `JWT_SECRET`: Your JWT secret key
+- `MONGODB_URI`: Your MongoDB connection string (make sure it's a valid MongoDB Atlas connection string)
+- `JWT_SECRET`: Your JWT secret key (use a strong, random string)
 - `PORT`: 10000 (Render's default port) or 5000 (Heroku's default port)
+- `NODE_ENV`: Set to "production"
+
+Example MongoDB URI format:
+```
+mongodb+srv://<username>:<password>@cluster0.abc123.mongodb.net/yaatrasarthi?retryWrites=true&w=majority
+```
 
 ### For Frontend (Netlify)
 
@@ -61,6 +67,22 @@ You can set this in the Netlify dashboard:
 2. Navigate to "Environment variables"
 3. Add a new variable with key `VITE_API_URL` and value as your backend URL
 4. Redeploy your site for the changes to take effect
+
+## Troubleshooting Database Issues
+
+If you're still experiencing database connection issues:
+
+1. Verify your MongoDB Atlas connection string is correct
+2. Ensure your MongoDB Atlas cluster has IP whitelist entries for your backend service:
+   - For Render: Add `0.0.0.0/0` to the IP whitelist
+   - For Heroku: Add `0.0.0.0/0` to the IP whitelist
+3. Check that your database credentials are correct
+4. Verify that the collections exist in your database:
+   - `app_users` for user data
+   - `app_monuments` for monument data
+   - `app_bookings` for booking data
+5. Check the backend logs for any MongoDB connection errors
+6. Ensure the database initialization is working correctly by checking the logs for messages about data initialization
 
 ## Environment Variables
 

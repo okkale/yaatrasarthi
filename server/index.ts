@@ -19,6 +19,8 @@ app.use(express.json())
 // MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yaatrasarthi'
 
+console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI)
+
 // Make sure to set MONGODB_URI in your .env file with your MongoDB Atlas connection string
 mongoose.connect(MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
@@ -199,7 +201,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
 // Update CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yaatrasarthi.netlify.app/', 'http://localhost:3000']
+    ? ['https://yaatrasarthi.netlify.app', 'http://localhost:3000']
     : 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -322,6 +324,7 @@ app.get('/api/user/me', authenticateToken, async (req: any, res: any) => {
 // Monument routes
 app.get('/api/monuments', async (req: any, res: any) => {
   try {
+    console.log('GET /api/monuments called with query:', req.query)
     const { limit, state, city, search } = req.query
     let query = {}
 
@@ -343,10 +346,12 @@ app.get('/api/monuments', async (req: any, res: any) => {
       }
     }
 
+    console.log('Monument query:', query)
     const monuments = await Monument.find(query)
       .limit(limit ? parseInt(limit) : 0)
       .sort({ createdAt: -1 })
 
+    console.log('Found', monuments.length, 'monuments')
     res.json(monuments)
   } catch (error) {
     console.error('Get monuments error:', error)
@@ -356,8 +361,11 @@ app.get('/api/monuments', async (req: any, res: any) => {
 
 app.get('/api/monuments/:id', async (req: any, res: any) => {
   try {
+    console.log('GET /api/monuments/:id called with id:', req.params.id)
     const monument = await Monument.findById(req.params.id)
+    console.log('Found monument:', monument)
     if (!monument) {
+      console.log('Monument not found for id:', req.params.id)
       return res.status(404).json({ message: 'Monument not found' })
     }
     res.json(monument)
@@ -377,8 +385,11 @@ app.post('/api/bookings', authenticateToken, [
   body('totalAmount').isFloat({ min: 0 }).withMessage('Invalid total amount')
 ], async (req: any, res: any) => {
   try {
+    console.log('POST /api/bookings called with body:', req.body)
+    console.log('User from token:', req.user)
     const errors = validationResult(req)
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array())
       return res.status(400).json({ message: errors.array()[0].msg })
     }
 
@@ -386,7 +397,9 @@ app.post('/api/bookings', authenticateToken, [
 
     // Verify monument exists
     const monument = await Monument.findById(monumentId)
+    console.log('Found monument for booking:', monument)
     if (!monument) {
+      console.log('Monument not found for booking:', monumentId)
       return res.status(404).json({ message: 'Monument not found' })
     }
 
@@ -402,9 +415,11 @@ app.post('/api/bookings', authenticateToken, [
     })
 
     await booking.save()
+    console.log('Booking saved:', booking)
 
     // Populate monument data for response
     await booking.populate('monumentId')
+    console.log('Booking populated with monument data:', booking)
 
     res.status(201).json({
       message: 'Booking created successfully',
@@ -418,10 +433,12 @@ app.post('/api/bookings', authenticateToken, [
 
 app.get('/api/bookings/my-bookings', authenticateToken, async (req: any, res: any) => {
   try {
+    console.log('GET /api/bookings/my-bookings called for user:', req.user._id)
     const bookings = await Booking.find({ userId: req.user._id })
       .populate('monumentId')
       .sort({ createdAt: -1 })
 
+    console.log('Found', bookings.length, 'bookings for user')
     res.json(bookings)
   } catch (error) {
     console.error('Get bookings error:', error)
@@ -438,8 +455,21 @@ const initializeData = async () => {
       return
     }
     
+    console.log('MongoDB connected successfully, checking for existing data...')
+    
+    // Check if collections exist and have data
+    if (mongoose.connection.db) {
+      const collections = await mongoose.connection.db.listCollections().toArray()
+      console.log('Available collections:', collections.map(c => c.name))
+    } else {
+      console.log('Database connection not available for listing collections')
+    }
+    
     const monumentCount = await Monument.countDocuments()
+    console.log(`Found ${monumentCount} monuments in database`)
+    
     if (monumentCount === 0) {
+      console.log('No monuments found, initializing sample data...')
       const sampleMonuments = [
         {
           name: "Taj Mahal",
@@ -487,9 +517,20 @@ const initializeData = async () => {
 
       await Monument.insertMany(sampleMonuments)
       console.log('Sample monuments added to database')
+    } else {
+      console.log('Monuments already exist in database, skipping initialization')
     }
+    
+    // Also check users collection
+    const userCount = await User.countDocuments()
+    console.log(`Found ${userCount} users in database`)
+    
+    // Also check bookings collection
+    const bookingCount = await Booking.countDocuments()
+    console.log(`Found ${bookingCount} bookings in database`)
   } catch (error) {
     console.error('Error initializing data:', error instanceof Error ? error.message : 'Unknown error occurred')
+    console.error('Full error:', error)
   }
 }
 
