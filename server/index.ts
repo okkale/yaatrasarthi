@@ -17,18 +17,48 @@ app.use(cors())
 app.use(express.json())
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/monumentpass'
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yaatrasarthi'
 
+// Make sure to set MONGODB_URI in your .env file with your MongoDB Atlas connection string
 mongoose.connect(MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
 })
-  .then(() => console.log('Connected to MongoDB'))
-  .then(() => initializeData())
-  .catch((error) => {
-    console.error('MongoDB connection error:', error)
-    console.log('Starting server without MongoDB connection...')
-  })
+
+const db = mongoose.connection
+
+db.on('connected', () => {
+  console.log('Mongoose connected to', MONGODB_URI)
+})
+
+db.on('error', (error) => {
+  console.error('Mongoose connection error:', error)
+})
+
+db.on('disconnected', () => {
+  console.log('Mongoose disconnected')
+})
+
+db.on('reconnected', () => {
+  console.log('Mongoose reconnected')
+})
+
+db.once('open', () => {
+  console.log('Mongoose connection open')
+  initializeData()
+})
+
+db.once('close', () => {
+  console.log('Mongoose connection closed')
+})
+
+db.once('timeout', () => {
+  console.log('Mongoose connection timeout')
+})
+
+db.once('parseError', (error) => {
+  console.error('Mongoose parse error:', error)
+})
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -53,7 +83,7 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 })
 
-const User = mongoose.model('User', userSchema)
+const User = mongoose.model('User', userSchema, 'app_users')
 
 // Monument Schema
 const monumentSchema = new mongoose.Schema({
@@ -97,7 +127,7 @@ const monumentSchema = new mongoose.Schema({
   timestamps: true
 })
 
-const Monument = mongoose.model('Monument', monumentSchema)
+const Monument = mongoose.model('Monument', monumentSchema, 'app_monuments')
 
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
@@ -142,7 +172,7 @@ const bookingSchema = new mongoose.Schema({
   timestamps: true
 })
 
-const Booking = mongoose.model('Booking', bookingSchema)
+const Booking = mongoose.model('Booking', bookingSchema, 'app_bookings')
 
 // Auth middleware
 const authenticateToken = async (req: any, res: any, next: any) => {
@@ -459,7 +489,7 @@ const initializeData = async () => {
       console.log('Sample monuments added to database')
     }
   } catch (error) {
-    console.error('Error initializing data:', error.message)
+    console.error('Error initializing data:', error instanceof Error ? error.message : 'Unknown error occurred')
   }
 }
 

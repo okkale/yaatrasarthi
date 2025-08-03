@@ -32,9 +32,19 @@ const Dashboard: React.FC = () => {
     fetchBookings()
   }, [])
 
+  // Determine API base URL based on environment
+  const getApiBaseUrl = () => {
+    // In production, use the environment variable VITE_API_URL
+    // In development, use relative URLs (will be proxied)
+    // @ts-ignore
+    return import.meta.env.VITE_API_URL || '';
+  };
+
+  const apiBaseUrl = getApiBaseUrl();
+
   const fetchBookings = async () => {
     try {
-      const response = await axios.get('/api/bookings/my-bookings')
+      const response = await axios.get(`${apiBaseUrl}/api/bookings/my-bookings`)
       setBookings(response.data)
     } catch (error) {
       console.error('Error fetching bookings:', error)

@@ -38,9 +38,19 @@ const Booking: React.FC = () => {
     }
   }, [monumentId])
 
+  // Determine API base URL based on environment
+  const getApiBaseUrl = () => {
+    // In production, use the environment variable VITE_API_URL
+    // In development, use relative URLs (will be proxied)
+    // @ts-ignore
+    return import.meta.env.VITE_API_URL || '';
+  };
+
+  const apiBaseUrl = getApiBaseUrl();
+
   const fetchMonument = async () => {
     try {
-      const response = await axios.get(`/api/monuments/${monumentId}`)
+      const response = await axios.get(`${apiBaseUrl}/api/monuments/${monumentId}`)
       setMonument(response.data)
     } catch (error) {
       console.error('Error fetching monument:', error)
@@ -77,7 +87,7 @@ const Booking: React.FC = () => {
     try {
       const totalAmount = calculateTotal()
       
-      await axios.post('/api/bookings', {
+      await axios.post(`${apiBaseUrl}/api/bookings`, {
         monumentId: monument._id,
         visitDate: bookingData.visitDate,
         numberOfAdults: bookingData.numberOfAdults,

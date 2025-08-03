@@ -43,9 +43,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [])
 
+  // Determine API base URL based on environment
+  const getApiBaseUrl = () => {
+    // In production, use the environment variable VITE_API_URL
+    // In development, use relative URLs (will be proxied)
+    // @ts-ignore
+    return import.meta.env.VITE_API_URL || '';
+  };
+
+  const apiBaseUrl = getApiBaseUrl();
+
   const fetchUser = async () => {
     try {
-      const response = await axios.get('/api/user/me')
+      const response = await axios.get(`${apiBaseUrl}/api/user/me`)
       setUser(response.data)
     } catch (error) {
       localStorage.removeItem('token')
@@ -56,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const login = async (email: string, password: string) => {
-    const response = await axios.post('/api/auth/login', { email, password })
+    const response = await axios.post(`${apiBaseUrl}/api/auth/login`, { email, password })
     const { token, user } = response.data
     
     localStorage.setItem('token', token)
@@ -65,7 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signup = async (name: string, email: string, password: string) => {
-    const response = await axios.post('/api/auth/register', { name, email, password })
+    const response = await axios.post(`${apiBaseUrl}/api/auth/register`, { name, email, password })
     const { token, user } = response.data
     
     localStorage.setItem('token', token)

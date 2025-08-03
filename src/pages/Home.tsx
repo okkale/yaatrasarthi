@@ -26,9 +26,19 @@ const Home: React.FC = () => {
     fetchPopularMonuments()
   }, [])
 
+  // Determine API base URL based on environment
+  const getApiBaseUrl = () => {
+    // In production, use the environment variable VITE_API_URL
+    // In development, use relative URLs (will be proxied)
+    // @ts-ignore
+    return import.meta.env.VITE_API_URL || '';
+  };
+
+  const apiBaseUrl = getApiBaseUrl();
+
   const fetchPopularMonuments = async () => {
     try {
-      const response = await axios.get('/api/monuments?limit=6')
+      const response = await axios.get(`${apiBaseUrl}/api/monuments?limit=6`)
       setMonuments(response.data)
     } catch (error) {
       console.error('Error fetching monuments:', error)
