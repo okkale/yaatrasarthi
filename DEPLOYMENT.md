@@ -29,23 +29,7 @@ This guide explains how to deploy the YaatraSarthi application with the frontend
      - `JWT_SECRET`: Your JWT secret key
      - `PORT`: 10000 (Render's default port)
 
-### Option 2: Deploy to Heroku
 
-1. Create an account at [Heroku](https://heroku.com/)
-2. Install the Heroku CLI
-3. Create a new Heroku app:
-   ```bash
-   heroku create your-app-name
-   ```
-4. Set environment variables:
-   ```bash
-   heroku config:set MONGODB_URI=your-mongodb-uri
-   heroku config:set JWT_SECRET=your-jwt-secret
-   heroku config:set PORT=10000
-   ```
-5. Deploy:
-   ```bash
-   git push heroku main
    ```
 
 ## Deploying the Frontend (React App) to Netlify
