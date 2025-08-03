@@ -30,6 +30,35 @@ This guide explains how to deploy the YaatraSarthi application with the frontend
      - `PORT`: 10000 (Render's default port)
      - `NODE_ENV`: production
 
+**Important**: Make sure the build process completes successfully and generates the compiled JavaScript files in the `dist-server` directory. The `npm start` command runs the compiled JavaScript file (`dist-server/index.js`) rather than using `tsx` to run the TypeScript file directly, which is more efficient and avoids issues with missing dependencies in production.
+
+### Verifying Successful Build on Render
+
+To ensure your build process completes successfully on Render.com:
+
+1. **Check Build Logs**: After deployment, go to your Render dashboard and check the build logs. Look for these key messages:
+   - `npm run build:server` should execute without errors
+   - You should see TypeScript compilation progress
+   - The build should complete with a success message
+
+2. **Verify dist-server Directory**: The build process should generate compiled JavaScript files in the `distThe steps to ensure your build process completes successfully and runs properly on Render.com are:
+
+1. In your package.json, you have a script `"build:server": "tsc --project tsconfig.node.json"` which compiles your server TypeScript files from the `server` directory into JavaScript files in the `dist-server` directory.
+
+2. Your start script `"start": "node dist-server/index.js"` runs the compiled JavaScript server file.
+
+3. On Render.com, configure your service with:
+   - Build command: `npm install && npm run build:server`
+   - Start command: `npm start`
+   - Environment variables: `MONGODB_URI`, `JWT_SECRET`, `PORT` (usually 10000), and `NODE_ENV=production`
+
+4. Ensure your `tsconfig.node.json` has `"outDir": "./dist-server"` and `"rootDir": "./server"` so the compiled files go to the correct directory.
+
+5. Deploy your project on Render.com. Render will run the build command to compile your server code, then start the server using the compiled JavaScript files.
+
+This setup avoids running TypeScript files directly with `tsx` in production, which can cause missing dependency issues. Instead, it uses the compiled JavaScript files for better performance and reliability.
+
+
 ### Option 2: Deploy to Heroku
 
 1. Create an account at [Heroku](https://heroku.com/)
@@ -49,16 +78,18 @@ This guide explains how to deploy the YaatraSarthi application with the frontend
    ```bash
    heroku buildpacks:set heroku/nodejs
    ```
-6. Deploy:
-   ```bash
-   git push heroku main
-   ```
-7. If the deployment fails due to missing build steps, you might need to add a `heroku-postbuild` script to your package.json:
+6. Add a `heroku-postbuild` script to your package.json to compile the server code:
    ```json
    "scripts": {
      "heroku-postbuild": "npm run build:server"
    }
    ```
+7. Deploy:
+   ```bash
+   git push heroku main
+   ```
+
+**Important**: Make sure the build process completes successfully and generates the compiled JavaScript files in the `dist-server` directory. The start script (`npm start`) runs the compiled JavaScript file (`dist-server/index.js`) rather than using `tsx` to run the TypeScript file directly, which is more efficient and avoids issues with missing dependencies in production.
 
 ## Deploying the Frontend (React App) to Netlify
 
