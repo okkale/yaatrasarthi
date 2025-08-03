@@ -199,7 +199,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
 // Update CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-netlify-app.netlify.app', 'http://localhost:3000']
+    ? ['https://yaatrasarthi.netlify.app/', 'http://localhost:3000']
     : 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
