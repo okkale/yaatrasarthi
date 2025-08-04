@@ -10,7 +10,7 @@
     "server": "tsx watch server/index.ts",
     "build": "tsc && vite build",
     "build:server": "tsc --project tsconfig.node.json",
-    "start": "node dist-server/index.js",
+    "start": "node dist-server/server/index.js",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",

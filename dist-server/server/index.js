@@ -7,18 +7,33 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 // Load environment variables
 dotenv.config();
+// Validate required environment variables
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+if (missingEnvVars.length > 0) {
+    console.error('Missing required environment variables:', missingEnvVars);
+    console.error('Please set the following environment variables:');
+    missingEnvVars.forEach(envVar => {
+        console.error(`- ${envVar}`);
+    });
+    process.exit(1);
+}
 const app = express();
 const PORT = process.env.PORT || 5000;
-// Middleware
-app.use(cors());
+// Middleware - JSON parsing only (CORS configured later)
 app.use(express.json());
 // MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yaatrasarthi';
-console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI);
-// Make sure to set MONGODB_URI in your .env file with your MongoDB Atlas connection string
+// MongoDB connection with better error handling
+console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
 mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
+    bufferCommands: false,
+    maxPoolSize: 10
+}).catch((error) => {
+    console.error('Failed to connect to MongoDB:', error);
+    process.exit(1);
 });
 const db = mongoose.connection;
 db.on('connected', () => {
@@ -174,15 +189,62 @@ const authenticateToken = async (req, res, next) => {
         res.status(403).json({ message: 'Invalid token' });
     }
 };
-// Update CORS configuration
-app.use(cors({
-    origin: process.env.NODE_ENV === 'production'
-        ? ['https://yaatrasarthi.netlify.app', 'http://localhost:3000']
-        : 'http://localhost:3000',
+// CORS configuration
+const corsOptions = {
+    origin: function (origin, callback) {
+        const allowedOrigins = [
+            'https://yaatrasarthi.netlify.app',
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://localhost:5000'
+        ];
+        console.log('Request origin:', origin);
+        // Allow requests with no origin (like mobile apps, curl, or server-to-server requests)
+        if (!origin) {
+            console.log('No origin - allowing request');
+            return callback(null, true);
+        }
+        if (allowedOrigins.includes(origin)) {
+            console.log('Origin allowed:', origin);
+            callback(null, true);
+        }
+        else {
+            console.log('Origin blocked:', origin);
+            console.log('Allowed origins:', allowedOrigins);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 200,
+    preflightContinue: false
+};
+// Apply CORS before all routes
+app.use(cors(corsOptions));
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin') || 'none'}`);
+    next();
+});
+// Health check endpoint for deployment platforms
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        mongoStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
+});
+// Root endpoint
+app.get('/', (req, res) => {
+    res.json({
+        message: 'YaatraSarthi API Server',
+        status: 'Running',
+        version: '1.0.0'
+    });
+});
 // Auth routes
 app.post('/api/auth/register', [
     body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
@@ -475,8 +537,14 @@ app.use((error, req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
 });
 app.listen(PORT, () => {
+    console.log(`=== YaatraSarthi Server Started ===`);
     console.log(`Server running on port ${PORT}`);
-    console.log(`MongoDB URI: ${MONGODB_URI}`);
+    console.log(`MongoDB URI: ${MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not Set'}`);
+    console.log(`Server URL: http://localhost:${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`API endpoints: http://localhost:${PORT}/api/monuments`);
+    console.log(`===================================`);
 });
 //# sourceMappingURL=index.js.map
