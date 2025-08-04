@@ -29,8 +29,6 @@ console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI.replace(/\
 mongoose.connect(MONGODB_URI, {
     serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
-    bufferCommands: false,
-    maxPoolSize: 10
 }).catch((error) => {
     console.error('Failed to connect to MongoDB:', error);
     process.exit(1);
