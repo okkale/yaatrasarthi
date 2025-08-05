@@ -9,6 +9,19 @@ import { body, validationResult } from 'express-validator'
 // Load environment variables
 dotenv.config()
 
+// Validate environment variables
+const validateEnv = () => {
+  const required = ['MONGODB_URI', 'JWT_SECRET']
+  const missing = required.filter(key => !process.env[key])
+  
+  if (missing.length > 0) {
+    console.error('Missing required environment variables:', missing)
+    process.exit(1)
+  }
+}
+
+validateEnv()
+
 const app = express()
 const PORT = process.env.PORT || 5000
 
@@ -17,50 +30,25 @@ app.use(cors())
 app.use(express.json())
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yaatrasarthi'
+const connectDB = async () => {
+  try {
+    const uri = process.env.MONGODB_URI
+    if (!uri) throw new Error('MONGODB_URI is required')
 
-console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI)
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    })
 
-// Make sure to set MONGODB_URI in your .env file with your MongoDB Atlas connection string
-mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-})
+    console.log('MongoDB connected successfully')
+  } catch (error) {
+    console.error('MongoDB connection error:', error)
+    process.exit(1)
+  }
+}
 
-const db = mongoose.connection
-
-db.on('connected', () => {
-  console.log('Mongoose connected to', MONGODB_URI)
-})
-
-db.on('error', (error) => {
-  console.error('Mongoose connection error:', error)
-})
-
-db.on('disconnected', () => {
-  console.log('Mongoose disconnected')
-})
-
-db.on('reconnected', () => {
-  console.log('Mongoose reconnected')
-})
-
-db.once('open', () => {
-  console.log('Mongoose connection open')
-  initializeData()
-})
-
-db.once('close', () => {
-  console.log('Mongoose connection closed')
-})
-
-db.once('timeout', () => {
-  console.log('Mongoose connection timeout')
-})
-
-db.once('parseError', (error) => {
-  console.error('Mongoose parse error:', error)
-})
+// Call it after express setup
+await connectDB()
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -541,7 +529,11 @@ app.use((error: any, req: any, res: any, next: any) => {
 })
 
 app.listen(PORT, () => {
+  console.log('=== YaatraSarthi Server Started ===')
   console.log(`Server running on port ${PORT}`)
-  console.log(`MongoDB URI: ${MONGODB_URI}`)
   console.log(`Environment: ${process.env.NODE_ENV}`)
+  console.log('MongoDB: Connected')
+  console.log('JWT Secret: Set')
+  console.log(`Server URL: http://localhost:${PORT}`)
+  console.log('===================================')
 })
