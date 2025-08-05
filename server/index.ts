@@ -5,6 +5,8 @@ import dotenv from 'dotenv'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { body, validationResult } from 'express-validator'
+import { nanoid } from 'nanoid'
+import QRCode from 'qrcode'
 
 // Load environment variables
 dotenv.config()
@@ -160,6 +162,26 @@ const bookingSchema = new mongoose.Schema({
   bookingDate: {
     type: Date,
     default: Date.now
+  },
+  // New fields for token system
+  bookingToken: {
+    type: String,
+    unique: true,
+    required: true,
+    default: () => nanoid(12) // Generate 12-character unique token
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'cancelled', 'completed', 'expired'],
+    default: 'confirmed'
+  },
+  qrCodeUrl: {
+    type: String,
+    default: null
+  },
+  expiryDate: {
+    type: Date,
+    required: true
   }
 }, {
   timestamps: true
@@ -448,27 +470,71 @@ app.post('/api/bookings', authenticateToken, [
       return res.status(404).json({ message: 'Monument not found' })
     }
 
-    // Create booking
+    // Calculate expiry date (visit date + 1 day for flexibility)
+    const visitDateObj = new Date(visitDate)
+    const expiryDate = new Date(visitDateObj)
+    expiryDate.setDate(expiryDate.getDate() + 1)
+
+    // Create booking with token
     const booking = new Booking({
       userId: req.user._id,
       monumentId,
-      visitDate: new Date(visitDate),
+      visitDate: visitDateObj,
       numberOfAdults,
       numberOfChildren,
       numberOfForeigners,
-      totalAmount
+      totalAmount,
+      expiryDate
     })
 
     await booking.save()
-    console.log('Booking saved:', booking)
+    console.log('Booking saved with token:', booking.bookingToken)
+
+    // Generate QR Code
+    const qrData = {
+      bookingId: booking._id,
+      token: booking.bookingToken,
+      monumentName: monument.name,
+      visitDate: visitDate,
+      totalAmount: totalAmount,
+      guests: numberOfAdults + numberOfChildren + numberOfForeigners
+    }
+
+    try {
+      // Generate QR code as data URL
+      const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        quality: 0.92,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      })
+
+      // Update booking with QR code
+      booking.qrCodeUrl = qrCodeDataUrl
+      await booking.save()
+      console.log('QR Code generated and saved for booking')
+    } catch (qrError) {
+      console.error('QR Code generation error:', qrError)
+      // Continue without QR code if generation fails
+    }
 
     // Populate monument data for response
     await booking.populate('monumentId')
-    console.log('Booking populated with monument data:', booking)
+    console.log('Booking populated with monument data')
 
     res.status(201).json({
       message: 'Booking created successfully',
-      booking
+      booking: {
+        ...booking.toObject(),
+        bookingToken: booking.bookingToken,
+        qrCodeUrl: booking.qrCodeUrl,
+        status: booking.status,
+        expiryDate: booking.expiryDate
+      }
     })
   } catch (error) {
     console.error('Create booking error:', error)
@@ -487,6 +553,85 @@ app.get('/api/bookings/my-bookings', authenticateToken, async (req: any, res: an
     res.json(bookings)
   } catch (error) {
     console.error('Get bookings error:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+})
+
+// Token verification endpoint
+app.get('/api/bookings/verify/:token', async (req: any, res: any) => {
+  try {
+    const { token } = req.params
+    console.log('Verifying booking token:', token)
+
+    const booking = await Booking.findOne({ bookingToken: token })
+      .populate('monumentId')
+      .populate('userId', 'name email')
+
+    if (!booking) {
+      return res.status(404).json({ 
+        message: 'Invalid booking token',
+        valid: false 
+      })
+    }
+
+    // Check if booking is expired
+    const now = new Date()
+    const isExpired = now > booking.expiryDate
+
+    // Check booking status
+    const isValid = booking.status === 'confirmed' && !isExpired
+
+    res.json({
+      valid: isValid,
+      booking: {
+        id: booking._id,
+        token: booking.bookingToken,
+        monument: booking.monumentId,
+        user: booking.userId,
+        visitDate: booking.visitDate,
+        guests: {
+          adults: booking.numberOfAdults,
+          children: booking.numberOfChildren,
+          foreigners: booking.numberOfForeigners
+        },
+        totalAmount: booking.totalAmount,
+        status: booking.status,
+        expiryDate: booking.expiryDate,
+        isExpired,
+        bookingDate: booking.bookingDate
+      },
+      message: isValid ? 'Valid booking token' : 
+               isExpired ? 'Booking token has expired' : 
+               `Booking status: ${booking.status}`
+    })
+  } catch (error) {
+    console.error('Token verification error:', error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+})
+
+// Get booking by token (for QR code scanning)
+app.get('/api/bookings/token/:token', async (req: any, res: any) => {
+  try {
+    const { token } = req.params
+    console.log('Getting booking by token:', token)
+
+    const booking = await Booking.findOne({ bookingToken: token })
+      .populate('monumentId')
+      .populate('userId', 'name email')
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    res.json({
+      booking: {
+        ...booking.toObject(),
+        qrCodeUrl: booking.qrCodeUrl
+      }
+    })
+  } catch (error) {
+    console.error('Get booking by token error:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 })

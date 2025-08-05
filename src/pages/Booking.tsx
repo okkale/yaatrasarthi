@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import BookingConfirmation from '../components/BookingConfirmation'
 
 interface Monument {
   _id: string
@@ -18,6 +19,24 @@ interface Monument {
   }
 }
 
+interface BookingResponse {
+  message: string
+  booking: {
+    _id: string
+    bookingToken: string
+    qrCodeUrl: string
+    monumentId: Monument
+    visitDate: string
+    numberOfAdults: number
+    numberOfChildren: number
+    numberOfForeigners: number
+    totalAmount: number
+    status: string
+    expiryDate: string
+    createdAt: string
+  }
+}
+
 const Booking: React.FC = () => {
   const { monumentId } = useParams<{ monumentId: string }>()
   const navigate = useNavigate()
@@ -31,6 +50,7 @@ const Booking: React.FC = () => {
     numberOfForeigners: 0
   })
   const [submitting, setSubmitting] = useState(false)
+  const [bookingConfirmation, setBookingConfirmation] = useState<BookingResponse | null>(null)
 
   useEffect(() => {
     if (monumentId) {
@@ -87,7 +107,7 @@ const Booking: React.FC = () => {
     try {
       const totalAmount = calculateTotal()
       
-      await axios.post(`${apiBaseUrl}/api/bookings`, {
+      const response = await axios.post(`${apiBaseUrl}/api/bookings`, {
         monumentId: monument._id,
         visitDate: bookingData.visitDate,
         numberOfAdults: bookingData.numberOfAdults,
@@ -96,9 +116,8 @@ const Booking: React.FC = () => {
         totalAmount
       })
       
-      // Simulate successful booking
-      alert('Booking successful! Redirecting to dashboard...')
-      navigate('/dashboard')
+      // Store booking confirmation data
+      setBookingConfirmation(response.data)
     } catch (error) {
       console.error('Error creating booking:', error)
       alert('Booking failed. Please try again.')
@@ -135,6 +154,11 @@ const Booking: React.FC = () => {
         </div>
       </div>
     )
+  }
+
+  // Show booking confirmation if booking was successful
+  if (bookingConfirmation) {
+    return <BookingConfirmation booking={bookingConfirmation.booking} />
   }
 
   return (

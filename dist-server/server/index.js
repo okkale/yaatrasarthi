@@ -5,60 +5,46 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
+import { nanoid } from 'nanoid';
+import QRCode from 'qrcode';
 // Load environment variables
 dotenv.config();
-// Validate required environment variables
-const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-if (missingEnvVars.length > 0) {
-    console.error('Missing required environment variables:', missingEnvVars);
-    console.error('Please set the following environment variables:');
-    missingEnvVars.forEach(envVar => {
-        console.error(`- ${envVar}`);
-    });
-    process.exit(1);
-}
+const validateEnvironment = () => {
+    const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+    const missing = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    if (missing.length > 0) {
+        console.error('Missing required environment variables:', missing);
+        console.error('Please set the following environment variables:');
+        missing.forEach(envVar => console.error(`- ${envVar}`));
+        process.exit(1);
+    }
+};
+// Validate environment variables
+validateEnvironment();
 const app = express();
 const PORT = process.env.PORT || 5000;
 // Middleware - JSON parsing only (CORS configured later)
 app.use(express.json());
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yaatrasarthi';
-// MongoDB connection with better error handling
-console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
-mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 10000,
-    socketTimeoutMS: 45000,
-}).catch((error) => {
-    console.error('Failed to connect to MongoDB:', error);
-    process.exit(1);
-});
-const db = mongoose.connection;
-db.on('connected', () => {
-    console.log('Mongoose connected to', MONGODB_URI);
-});
-db.on('error', (error) => {
-    console.error('Mongoose connection error:', error);
-});
-db.on('disconnected', () => {
-    console.log('Mongoose disconnected');
-});
-db.on('reconnected', () => {
-    console.log('Mongoose reconnected');
-});
-db.once('open', () => {
-    console.log('Mongoose connection open');
-    initializeData();
-});
-db.once('close', () => {
-    console.log('Mongoose connection closed');
-});
-db.once('timeout', () => {
-    console.log('Mongoose connection timeout');
-});
-db.once('parseError', (error) => {
-    console.error('Mongoose parse error:', error);
-});
+const connectDB = async () => {
+    try {
+        const uri = process.env.MONGODB_URI;
+        if (!uri)
+            throw new Error('MONGODB_URI is required');
+        console.log('Attempting to connect to MongoDB...');
+        await mongoose.connect(uri, {
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+        });
+        console.log('MongoDB connected successfully');
+    }
+    catch (error) {
+        console.error('MongoDB connection error:', error);
+        process.exit(1);
+    }
+};
+// Call it after express setup
+await connectDB();
 // User Schema
 const userSchema = new mongoose.Schema({
     name: {
@@ -162,6 +148,26 @@ const bookingSchema = new mongoose.Schema({
     bookingDate: {
         type: Date,
         default: Date.now
+    },
+    // New fields for token system
+    bookingToken: {
+        type: String,
+        unique: true,
+        required: true,
+        default: () => nanoid(12) // Generate 12-character unique token
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'confirmed', 'cancelled', 'completed', 'expired'],
+        default: 'confirmed'
+    },
+    qrCodeUrl: {
+        type: String,
+        default: null
+    },
+    expiryDate: {
+        type: Date,
+        required: true
     }
 }, {
     timestamps: true
@@ -407,24 +413,65 @@ app.post('/api/bookings', authenticateToken, [
             console.log('Monument not found for booking:', monumentId);
             return res.status(404).json({ message: 'Monument not found' });
         }
-        // Create booking
+        // Calculate expiry date (visit date + 1 day for flexibility)
+        const visitDateObj = new Date(visitDate);
+        const expiryDate = new Date(visitDateObj);
+        expiryDate.setDate(expiryDate.getDate() + 1);
+        // Create booking with token
         const booking = new Booking({
             userId: req.user._id,
             monumentId,
-            visitDate: new Date(visitDate),
+            visitDate: visitDateObj,
             numberOfAdults,
             numberOfChildren,
             numberOfForeigners,
-            totalAmount
+            totalAmount,
+            expiryDate
         });
         await booking.save();
-        console.log('Booking saved:', booking);
+        console.log('Booking saved with token:', booking.bookingToken);
+        // Generate QR Code
+        const qrData = {
+            bookingId: booking._id,
+            token: booking.bookingToken,
+            monumentName: monument.name,
+            visitDate: visitDate,
+            totalAmount: totalAmount,
+            guests: numberOfAdults + numberOfChildren + numberOfForeigners
+        };
+        try {
+            // Generate QR code as data URL
+            const qrCodeDataUrl = await QRCode.toDataURL(JSON.stringify(qrData), {
+                errorCorrectionLevel: 'M',
+                type: 'image/png',
+                quality: 0.92,
+                margin: 1,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            });
+            // Update booking with QR code
+            booking.qrCodeUrl = qrCodeDataUrl;
+            await booking.save();
+            console.log('QR Code generated and saved for booking');
+        }
+        catch (qrError) {
+            console.error('QR Code generation error:', qrError);
+            // Continue without QR code if generation fails
+        }
         // Populate monument data for response
         await booking.populate('monumentId');
-        console.log('Booking populated with monument data:', booking);
+        console.log('Booking populated with monument data');
         res.status(201).json({
             message: 'Booking created successfully',
-            booking
+            booking: {
+                ...booking.toObject(),
+                bookingToken: booking.bookingToken,
+                qrCodeUrl: booking.qrCodeUrl,
+                status: booking.status,
+                expiryDate: booking.expiryDate
+            }
         });
     }
     catch (error) {
@@ -443,6 +490,77 @@ app.get('/api/bookings/my-bookings', authenticateToken, async (req, res) => {
     }
     catch (error) {
         console.error('Get bookings error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+// Token verification endpoint
+app.get('/api/bookings/verify/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        console.log('Verifying booking token:', token);
+        const booking = await Booking.findOne({ bookingToken: token })
+            .populate('monumentId')
+            .populate('userId', 'name email');
+        if (!booking) {
+            return res.status(404).json({
+                message: 'Invalid booking token',
+                valid: false
+            });
+        }
+        // Check if booking is expired
+        const now = new Date();
+        const isExpired = now > booking.expiryDate;
+        // Check booking status
+        const isValid = booking.status === 'confirmed' && !isExpired;
+        res.json({
+            valid: isValid,
+            booking: {
+                id: booking._id,
+                token: booking.bookingToken,
+                monument: booking.monumentId,
+                user: booking.userId,
+                visitDate: booking.visitDate,
+                guests: {
+                    adults: booking.numberOfAdults,
+                    children: booking.numberOfChildren,
+                    foreigners: booking.numberOfForeigners
+                },
+                totalAmount: booking.totalAmount,
+                status: booking.status,
+                expiryDate: booking.expiryDate,
+                isExpired,
+                bookingDate: booking.bookingDate
+            },
+            message: isValid ? 'Valid booking token' :
+                isExpired ? 'Booking token has expired' :
+                    `Booking status: ${booking.status}`
+        });
+    }
+    catch (error) {
+        console.error('Token verification error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+// Get booking by token (for QR code scanning)
+app.get('/api/bookings/token/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        console.log('Getting booking by token:', token);
+        const booking = await Booking.findOne({ bookingToken: token })
+            .populate('monumentId')
+            .populate('userId', 'name email');
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+        res.json({
+            booking: {
+                ...booking.toObject(),
+                qrCodeUrl: booking.qrCodeUrl
+            }
+        });
+    }
+    catch (error) {
+        console.error('Get booking by token error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
@@ -534,15 +652,27 @@ app.use((error, req, res, next) => {
     console.error('Unhandled error:', error);
     res.status(500).json({ message: 'Internal server error' });
 });
-app.listen(PORT, () => {
-    console.log(`=== YaatraSarthi Server Started ===`);
-    console.log(`Server running on port ${PORT}`);
-    console.log(`MongoDB URI: ${MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
-    console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not Set'}`);
-    console.log(`Server URL: http://localhost:${PORT}`);
-    console.log(`Health check: http://localhost:${PORT}/health`);
-    console.log(`API endpoints: http://localhost:${PORT}/api/monuments`);
-    console.log(`===================================`);
-});
+// Start server and initialize data
+const startServer = async () => {
+    try {
+        // Initialize data after MongoDB connection is established
+        await initializeData();
+        app.listen(PORT, () => {
+            console.log('=== YaatraSarthi Server Started ===');
+            console.log(`Server running on port ${PORT}`);
+            console.log(`MongoDB URI: ${process.env.MONGODB_URI ? 'Set' : 'Not set'}`);
+            console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not set'}`);
+            console.log(`Server URL: http://localhost:${PORT}`);
+            console.log(`Health check: http://localhost:${PORT}/health`);
+            console.log(`API endpoints: http://localhost:${PORT}/api/monuments`);
+            console.log('===================================');
+        });
+    }
+    catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+};
+startServer();
 //# sourceMappingURL=index.js.map
