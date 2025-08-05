@@ -5,11 +5,11 @@
   "description": "Historical Monument Ticket Booking Website",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server/index.ts",
-    "server": "tsx watch server/index.ts",
     "build": "npm run build:server",
     "build:server": "tsc --project tsconfig.node.json",
     "start": "node dist-server/server/index.js",
+    "dev": "tsx watch server/index.ts",
+    "server": "tsx watch server/index.ts",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",

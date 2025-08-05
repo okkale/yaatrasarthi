@@ -1,12 +1,12 @@
+// Load environment variables
+import dotenv from 'dotenv'
 import express from 'express'
 import mongoose from 'mongoose'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { body, validationResult } from 'express-validator'
 
-// Load environment variables
 dotenv.config()
 
 const validateEnvironment = () => {
@@ -27,7 +27,7 @@ validateEnvironment()
 const app = express()
 const PORT = process.env.PORT || 5000
 
-// Middleware - JSON parsing only (CORS configured later)
+// Middleware
 app.use(express.json())
 
 // MongoDB connection
@@ -585,21 +585,21 @@ app.use((error: any, req: any, res: any, next: any) => {
   res.status(500).json({ message: 'Internal server error' })
 })
 
-// Start server and initialize data
+// Main server startup function
 const startServer = async () => {
   try {
-    // Initialize data after MongoDB connection is established
+    // Connect to database
+    await connectDB()
+    
+    // Initialize data
     await initializeData()
     
+    // Start server
     app.listen(PORT, () => {
       console.log('=== YaatraSarthi Server Started ===')
       console.log(`Server running on port ${PORT}`)
-      console.log(`MongoDB URI: ${process.env.MONGODB_URI ? 'Set' : 'Not set'}`)
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
-      console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not set'}`)
       console.log(`Server URL: http://localhost:${PORT}`)
-      console.log(`Health check: http://localhost:${PORT}/health`)
-      console.log(`API endpoints: http://localhost:${PORT}/api/monuments`)
       console.log('===================================')
     })
   } catch (error) {
@@ -608,4 +608,5 @@ const startServer = async () => {
   }
 }
 
+// Start the server
 startServer()

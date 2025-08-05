@@ -7,58 +7,42 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 // Load environment variables
 dotenv.config();
-// Validate required environment variables
-const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-if (missingEnvVars.length > 0) {
-    console.error('Missing required environment variables:', missingEnvVars);
-    console.error('Please set the following environment variables:');
-    missingEnvVars.forEach(envVar => {
-        console.error(`- ${envVar}`);
-    });
-    process.exit(1);
-}
+const validateEnvironment = () => {
+    const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+    const missing = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    if (missing.length > 0) {
+        console.error('Missing required environment variables:', missing);
+        console.error('Please set the following environment variables:');
+        missing.forEach(envVar => console.error(`- ${envVar}`));
+        process.exit(1);
+    }
+};
+// Validate environment variables
+validateEnvironment();
 const app = express();
 const PORT = process.env.PORT || 5000;
 // Middleware - JSON parsing only (CORS configured later)
 app.use(express.json());
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yaatrasarthi';
-// MongoDB connection with better error handling
-console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
-mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 10000,
-    socketTimeoutMS: 45000,
-}).catch((error) => {
-    console.error('Failed to connect to MongoDB:', error);
-    process.exit(1);
-});
-const db = mongoose.connection;
-db.on('connected', () => {
-    console.log('Mongoose connected to', MONGODB_URI);
-});
-db.on('error', (error) => {
-    console.error('Mongoose connection error:', error);
-});
-db.on('disconnected', () => {
-    console.log('Mongoose disconnected');
-});
-db.on('reconnected', () => {
-    console.log('Mongoose reconnected');
-});
-db.once('open', () => {
-    console.log('Mongoose connection open');
-    initializeData();
-});
-db.once('close', () => {
-    console.log('Mongoose connection closed');
-});
-db.once('timeout', () => {
-    console.log('Mongoose connection timeout');
-});
-db.once('parseError', (error) => {
-    console.error('Mongoose parse error:', error);
-});
+const connectDB = async () => {
+    try {
+        const uri = process.env.MONGODB_URI;
+        if (!uri)
+            throw new Error('MONGODB_URI is required');
+        console.log('Attempting to connect to MongoDB...');
+        await mongoose.connect(uri, {
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+        });
+        console.log('MongoDB connected successfully');
+    }
+    catch (error) {
+        console.error('MongoDB connection error:', error);
+        process.exit(1);
+    }
+};
+// Call it after express setup
+await connectDB();
 // User Schema
 const userSchema = new mongoose.Schema({
     name: {
@@ -534,15 +518,27 @@ app.use((error, req, res, next) => {
     console.error('Unhandled error:', error);
     res.status(500).json({ message: 'Internal server error' });
 });
-app.listen(PORT, () => {
-    console.log(`=== YaatraSarthi Server Started ===`);
-    console.log(`Server running on port ${PORT}`);
-    console.log(`MongoDB URI: ${MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
-    console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not Set'}`);
-    console.log(`Server URL: http://localhost:${PORT}`);
-    console.log(`Health check: http://localhost:${PORT}/health`);
-    console.log(`API endpoints: http://localhost:${PORT}/api/monuments`);
-    console.log(`===================================`);
-});
+// Start server and initialize data
+const startServer = async () => {
+    try {
+        // Initialize data after MongoDB connection is established
+        await initializeData();
+        app.listen(PORT, () => {
+            console.log('=== YaatraSarthi Server Started ===');
+            console.log(`Server running on port ${PORT}`);
+            console.log(`MongoDB URI: ${process.env.MONGODB_URI ? 'Set' : 'Not set'}`);
+            console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not set'}`);
+            console.log(`Server URL: http://localhost:${PORT}`);
+            console.log(`Health check: http://localhost:${PORT}/health`);
+            console.log(`API endpoints: http://localhost:${PORT}/api/monuments`);
+            console.log('===================================');
+        });
+    }
+    catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+};
+startServer();
 //# sourceMappingURL=index.js.map
