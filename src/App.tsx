@@ -8,6 +8,7 @@ import Explore from './pages/Explore'
 import Booking from './pages/Booking'
 import Dashboard from './pages/Dashboard'
 import Navbar from './components/Navbar'
+import Monuments from './pages/Monuments'
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth()
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path="/auth" element={!user ? <LoginSignup /> : <Navigate to="/" />} />
         <Route path="/" element={<Home />} />
+        <Route path="/monuments" element={<Monuments />} />
         <Route path="/explore" element={
           <ProtectedRoute>
             <Explore />

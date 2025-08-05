@@ -1,11 +1,15 @@
 // Load environment variables
 import dotenv from 'dotenv'
 import express from 'express'
+
+// Define PORT from environment variable or use default
+const PORT = process.env.PORT || 5000
 import mongoose from 'mongoose'
 import cors from 'cors'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { body, validationResult } from 'express-validator'
+import { corsOptions, corsDebugMiddleware } from './config/cors'
 
 dotenv.config()
 
@@ -25,7 +29,14 @@ const validateEnvironment = () => {
 validateEnvironment()
 
 const app = express()
-const PORT = process.env.PORT || 5000
+
+// Apply CORS middleware
+app.use(cors(corsOptions))
+
+// Apply debug middleware in development
+if (process.env.NODE_ENV === 'development') {
+  app.use(corsDebugMiddleware)
+}
 
 // Middleware
 app.use(express.json())
@@ -189,45 +200,8 @@ const authenticateToken = async (req: any, res: any, next: any) => {
   }
 }
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    const allowedOrigins = [
-      'https://yaatrasarthi.netlify.app',
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:5000'
-    ]
-    
-    console.log('Request origin:', origin)
-    
-    // Allow requests with no origin (like mobile apps, curl, or server-to-server requests)
-    if (!origin) {
-      console.log('No origin - allowing request')
-      return callback(null, true)
-    }
-    
-    if (allowedOrigins.includes(origin)) {
-      console.log('Origin allowed:', origin)
-      callback(null, true)
-    } else {
-      console.log('Origin blocked:', origin)
-      console.log('Allowed origins:', allowedOrigins)
-      callback(new Error('Not allowed by CORS'))
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200,
-  preflightContinue: false
-}
-
-// Apply CORS before all routes
-app.use(cors(corsOptions))
-
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions))
+// Middleware
+app.use(express.json())
 
 // Request logging middleware
 app.use((req: any, res: any, next: any) => {
