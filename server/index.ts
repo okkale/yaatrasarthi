@@ -27,7 +27,7 @@ const validateEnvironment = () => {
 validateEnvironment()
 
 const app = express()
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5001
 
 // Middleware - JSON parsing only (CORS configured later)
 app.use(express.json())
@@ -218,7 +218,7 @@ const corsOptions = {
       'https://yaatrasarthi.netlify.app',
       'http://localhost:3000',
       'http://localhost:5173',
-      'http://localhost:5000'
+      'http://localhost:5001'
     ]
     
     console.log('Request origin:', origin)
