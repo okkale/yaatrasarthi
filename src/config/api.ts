@@ -1,12 +1,9 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
+export interface ImportMetaEnv {
   readonly VITE_API_URL: string
 }
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv
-}
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
