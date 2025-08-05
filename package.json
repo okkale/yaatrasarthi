@@ -6,8 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch server/index.ts",
+    "dev:frontend": "vite",
+    "dev:backend": "tsx watch server/index.ts",
     "server": "tsx watch server/index.ts",
     "build": "npm run build:server",
+    "build:frontend": "vite build",
     "build:server": "tsc --project tsconfig.node.json",
     "start": "node dist-server/server/index.js",
     "preview": "vite preview",
