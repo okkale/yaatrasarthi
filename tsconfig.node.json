@@ -2,18 +2,18 @@
   "compilerOptions": {
     "composite": true,
     "skipLibCheck": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "strict": false,
+    "strict": true,
     "outDir": "./dist-server",
     "rootDir": "./",
     "sourceMap": true,
-    "noImplicitAny": false,
-    "baseUrl": ".",
+    "target": "ES2020",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"]
+    "resolveJsonModule": true
   },
-  "include": ["vite.config.ts", "server/**/*"]
+  "include": ["server/**/*"],
+  "exclude": ["node_modules", "dist-server", "src"]
 }
