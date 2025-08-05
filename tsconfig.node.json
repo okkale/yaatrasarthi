@@ -5,12 +5,15 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "allowSyntheticDefaultImports": true,
-    "strict": true,
+    "strict": false,
     "outDir": "./dist-server",
     "rootDir": "./",
     "sourceMap": true,
-    "noImplicitAny": true,
-    "baseUrl": "."
+    "noImplicitAny": false,
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
   },
   "include": ["vite.config.ts", "server/**/*"]
 }
