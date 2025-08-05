@@ -9,6 +9,21 @@ import { body, validationResult } from 'express-validator'
 // Load environment variables
 dotenv.config()
 
+const validateEnvironment = () => {
+  const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET']
+  const missing = requiredEnvVars.filter(envVar => !process.env[envVar])
+  
+  if (missing.length > 0) {
+    console.error('Missing required environment variables:', missing)
+    console.error('Please set the following environment variables:')
+    missing.forEach(envVar => console.error(`- ${envVar}`))
+    process.exit(1)
+  }
+}
+
+// Validate environment variables
+validateEnvironment()
+
 const app = express()
 const PORT = process.env.PORT || 5000
 
@@ -21,13 +36,12 @@ const connectDB = async () => {
     const uri = process.env.MONGODB_URI
     if (!uri) throw new Error('MONGODB_URI is required')
 
-console.log('Attempting to connect to MongoDB with URI:', MONGODB_URI)
+    console.log('Attempting to connect to MongoDB...')
 
-// Make sure to set MONGODB_URI in your .env file with your MongoDB Atlas connection string
-mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-})
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    })
 
     console.log('MongoDB connected successfully')
   } catch (error) {
@@ -571,8 +585,27 @@ app.use((error: any, req: any, res: any, next: any) => {
   res.status(500).json({ message: 'Internal server error' })
 })
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-  console.log(`MongoDB URI: ${MONGODB_URI}`)
-  console.log(`Environment: ${process.env.NODE_ENV}`)
-})
+// Start server and initialize data
+const startServer = async () => {
+  try {
+    // Initialize data after MongoDB connection is established
+    await initializeData()
+    
+    app.listen(PORT, () => {
+      console.log('=== YaatraSarthi Server Started ===')
+      console.log(`Server running on port ${PORT}`)
+      console.log(`MongoDB URI: ${process.env.MONGODB_URI ? 'Set' : 'Not set'}`)
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+      console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not set'}`)
+      console.log(`Server URL: http://localhost:${PORT}`)
+      console.log(`Health check: http://localhost:${PORT}/health`)
+      console.log(`API endpoints: http://localhost:${PORT}/api/monuments`)
+      console.log('===================================')
+    })
+  } catch (error) {
+    console.error('Failed to start server:', error)
+    process.exit(1)
+  }
+}
+
+startServer()
