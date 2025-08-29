@@ -456,42 +456,42 @@ const initializeData = async () => {
                     name: "Taj Mahal",
                     description: "The Taj Mahal is an ivory-white marble mausoleum on the right bank of the river Yamuna in the Indian city of Agra. It was commissioned in 1632 by the Mughal emperor Shah Jahan to house the tomb of his favourite wife, Mumtaz Mahal.",
                     location: { city: "Agra", state: "Uttar Pradesh" },
-                    imageUrl: "https://images.pexels.com/photos/1603650/pexels-photo-1603650.jpeg?auto=compress&cs=tinysrgb&w=800",
+                    imageUrl: "/src/Assets/tajmahal.jpeg",
                     ticketPrices: { adult: 50, child: 25, foreigner: 1100 }
                 },
                 {
-                    name: "Red Fort",
-                    description: "The Red Fort is a historic walled city in Delhi, India, which served as the main residence of the Mughal Emperors for nearly 200 years, until 1856. It is located in the center of Delhi and houses a number of museums.",
-                    location: { city: "New Delhi", state: "Delhi" },
-                    imageUrl: "https://images.pexels.com/photos/3581368/pexels-photo-3581368.jpeg?auto=compress&cs=tinysrgb&w=800",
+                    name: "Ajanta Caves",
+                    description: "The Ajanta Caves are about 30 rock-cut Buddhist cave monuments which date from the 2nd century BCE to about 480 CE in Maharashtra, India. The caves include paintings and rock-cut sculptures described as among the finest surviving examples of ancient Indian art.",
+                location: { city: "Aurangabad", state: "Maharashtra" },
+                    imageUrl: "/src/Assets/ajanta.jpeg",
                     ticketPrices: { adult: 35, child: 15, foreigner: 550 }
                 },
                 {
                     name: "Gateway of India",
                     description: "The Gateway of India is an arch-monument built in the early twentieth century in the city of Mumbai, in the Indian state of Maharashtra. It was erected to commemorate the landing of King George V and Queen Mary at Apollo Bunder.",
                     location: { city: "Mumbai", state: "Maharashtra" },
-                    imageUrl: "https://images.pexels.com/photos/4321194/pexels-photo-4321194.jpeg?auto=compress&cs=tinysrgb&w=800",
+                    imageUrl: "/src/Assets/Gateway of India.jfif",
                     ticketPrices: { adult: 25, child: 10, foreigner: 300 }
                 },
                 {
                     name: "Hawa Mahal",
                     description: "Hawa Mahal is a palace in the city of Jaipur, India. Built from red and pink sandstone, it is on the edge of the City Palace, Jaipur, and extends to the Zenana, or women's chambers.",
                     location: { city: "Jaipur", state: "Rajasthan" },
-                    imageUrl: "https://images.pexels.com/photos/3370598/pexels-photo-3370598.jpeg?auto=compress&cs=tinysrgb&w=800",
+                    imageUrl: "/src/Assets/havamahal.jpg",
                     ticketPrices: { adult: 50, child: 20, foreigner: 200 }
                 },
                 {
-                    name: "Mysore Palace",
-                    description: "Mysore Palace, also known as Amba Vilas Palace, is a historical palace and a royal residence at Mysore in the Indian State of Karnataka. It is the official residence of the Wadiyar dynasty.",
-                    location: { city: "Mysore", state: "Karnataka" },
-                    imageUrl: "https://images.pexels.com/photos/8847486/pexels-photo-8847486.jpeg?auto=compress&cs=tinysrgb&w=800",
+                    name: "Elephanta Caves",
+                    description: "The Elephanta Caves are a network of sculpted caves located on Elephanta Island, or Gharapuri, in Mumbai Harbour, 11 km (6.8 mi) to the east of the city of Mumbai in the Indian state of Maharashtra.",
+                    location: { city: "Mumbai", state: "Maharastra" },
+                    imageUrl: "/src/Assets/Elephanta-Caves.jpg",
                     ticketPrices: { adult: 70, child: 30, foreigner: 200 }
                 },
                 {
-                    name: "Qutub Minar",
-                    description: "The Qutub Minar, also spelled Qutab Minar and Qutb Minar, is a minaret and victory tower that forms part of the Qutb complex, which lies at the site of Delhi's oldest fortified city, Lal Kot.",
-                    location: { city: "New Delhi", state: "Delhi" },
-                    imageUrl: "https://images.pexels.com/photos/12480794/pexels-photo-12480794.jpeg?auto=compress&cs=tinysrgb&w=800",
+                    name: "Raigad Fort",
+                    description: "Raigad Fort is a hill fort situated in the Raigad district of Maharashtra, India. The fort was the capital of the Maratha Empire under the rule of Chhatrapati Shivaji Maharaj for almost 26 years",
+                    location: { city: "Raigad", state: "Maharastra" },
+                    imageUrl: "/src/Assets/raigad.jpg",
                     ticketPrices: { adult: 30, child: 15, foreigner: 550 }
                 }
             ];
