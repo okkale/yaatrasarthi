@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import axios from 'axios'
+import { monumentsAPI } from '../services/api'
 
 interface Monument {
   _id: string
@@ -26,19 +26,9 @@ const Home: React.FC = () => {
     fetchPopularMonuments()
   }, [])
 
-  // Determine API base URL based on environment
-  const getApiBaseUrl = () => {
-    // In production, use the environment variable VITE_API_URL
-    // In development, use relative URLs (will be proxied)
-    // @ts-ignore
-    return import.meta.env.VITE_API_URL || '';
-  };
-
-  const apiBaseUrl = getApiBaseUrl();
-
   const fetchPopularMonuments = async () => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/api/monuments?limit=6`)
+      const response = await monumentsAPI.getAll({ limit: 6 })
       setMonuments(response.data)
     } catch (error) {
       console.error('Error fetching monuments:', error)
@@ -170,6 +160,136 @@ const Home: React.FC = () => {
               With Yaatrasarthi, finding good places to visit becomes easier than ever. Browse curated heritage sites, 
               learn about their history, and secure your entry — all in just a few clicks.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Integration Bridge Section */}
+      <section className="py-20 bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Bridge <span className="text-primary-600">All Your Apps</span>
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Stop switching between multiple apps. Connect your existing travel tools and manage everything from one intelligent platform.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Google Maps Integration */}
+            <div className="bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all border border-gray-700 hover:border-primary-500">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-600 rounded-full flex items-center justify-center">
+                  <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary-600 text-white">
+                  Connected
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Google Maps</h3>
+              <p className="text-gray-300 text-sm mb-4">Navigate to monuments with real-time directions and traffic updates</p>
+              <button className="w-full py-2 rounded-lg font-medium transition-all bg-primary-600 text-white hover:bg-primary-700">
+                Manage
+              </button>
+            </div>
+
+            {/* Calendar Integration */}
+            <div className="bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all border border-gray-700 hover:border-primary-500">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-600 rounded-full flex items-center justify-center">
+                  <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
+                  Available
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Google Calendar</h3>
+              <p className="text-gray-300 text-sm mb-4">Sync your visit dates and get reminders for upcoming trips</p>
+              <button className="w-full py-2 rounded-lg font-medium transition-all bg-primary-600 text-white hover:bg-primary-700">
+                Connect
+              </button>
+            </div>
+
+            {/* Weather Integration */}
+            <div className="bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all border border-gray-700 hover:border-primary-500">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-600 rounded-full flex items-center justify-center">
+                  <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary-600 text-white">
+                  Connected
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Weather Forecast</h3>
+              <p className="text-gray-300 text-sm mb-4">Get weather updates for your destination before you visit</p>
+              <button className="w-full py-2 rounded-lg font-medium transition-all bg-primary-600 text-white hover:bg-primary-700">
+                Manage
+              </button>
+            </div>
+
+            {/* Photo Storage */}
+            <div className="bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all border border-gray-700 hover:border-primary-500">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-600 rounded-full flex items-center justify-center">
+                  <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
+                  Available
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Google Photos</h3>
+              <p className="text-gray-300 text-sm mb-4">Automatically backup and organize your monument photos</p>
+              <button className="w-full py-2 rounded-lg font-medium transition-all bg-primary-600 text-white hover:bg-primary-700">
+                Connect
+              </button>
+            </div>
+
+            {/* Travel Expense Tracker */}
+            <div className="bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all border border-gray-700 hover:border-primary-500">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-600 rounded-full flex items-center justify-center">
+                  <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-700 text-gray-300">
+                  Available
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Expense Tracker</h3>
+              <p className="text-gray-300 text-sm mb-4">Track your travel expenses and get budget insights</p>
+              <button className="w-full py-2 rounded-lg font-medium transition-all bg-primary-600 text-white hover:bg-primary-700">
+                Connect
+              </button>
+            </div>
+
+            {/* Social Media Sharing */}
+            <div className="bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all border border-gray-700 hover:border-primary-500">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-600 rounded-full flex items-center justify-center">
+                  <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
+                  </svg>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary-600 text-white">
+                  Connected
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Social Sharing</h3>
+              <p className="text-gray-300 text-sm mb-4">Share your experiences on social media platforms</p>
+              <button className="w-full py-2 rounded-lg font-medium transition-all bg-primary-600 text-white hover:bg-primary-700">
+                Manage
+              </button>
+            </div>
           </div>
         </div>
       </section>

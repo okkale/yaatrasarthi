@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { monumentsAPI, bookingsAPI } from '../services/api'
 
 interface Monument {
   _id: string
@@ -38,19 +38,9 @@ const Booking: React.FC = () => {
     }
   }, [monumentId])
 
-  // Determine API base URL based on environment
-  const getApiBaseUrl = () => {
-    // In production, use the environment variable VITE_API_URL
-    // In development, use relative URLs (will be proxied)
-    // @ts-ignore
-    return import.meta.env.VITE_API_URL || '';
-  };
-
-  const apiBaseUrl = getApiBaseUrl();
-
   const fetchMonument = async () => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/api/monuments/${monumentId}`)
+      const response = await monumentsAPI.getById(monumentId!)
       setMonument(response.data)
     } catch (error) {
       console.error('Error fetching monument:', error)
@@ -87,7 +77,7 @@ const Booking: React.FC = () => {
     try {
       const totalAmount = calculateTotal()
       
-      await axios.post(`${apiBaseUrl}/api/bookings`, {
+      await bookingsAPI.create({
         monumentId: monument._id,
         visitDate: bookingData.visitDate,
         numberOfAdults: bookingData.numberOfAdults,
@@ -147,7 +137,7 @@ const Booking: React.FC = () => {
       <div className="absolute inset-0 bg-black bg-opacity-60"></div>
       
       <div className="relative z-10 py-8">
-        <div className="max-w-8xl mx-100% px-10 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-100% px-10 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start ml-20 mr-20 py-8 ">
             {/* Left Side - Monument Info */}
             <div className="text-white">
@@ -162,7 +152,7 @@ const Booking: React.FC = () => {
                   Back to Explore
                 </button>
                 
-                <h1 className="text-4xl md:text-4xl font-bold   ">
+                <h1 className="text-3xl md:text-3xl font-bold   ">
                   {monument.name}
                 </h1>
                 <p className="text-xl mb-6 flex items-center">
@@ -196,14 +186,14 @@ const Booking: React.FC = () => {
             </div>
 
             {/* Right Side - Booking Form */}
-            <div className="bg-white bg-opacity-95 rounded-2xl p-8 shadow-2xl backdrop-blur-sm ml-40">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+            <div className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-2xl backdrop-blur-sm ml-40 overflow-hidden max-h-screen flex flex-col">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4 text-center">
                 Book Your Tickets Now!
               </h2>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-2 overflow-hidden flex-1">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Visit Date:
                   </label>
                   <input
@@ -213,12 +203,12 @@ const Booking: React.FC = () => {
                     onChange={handleInputChange}
                     min={getTomorrowDate()}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Number of Adults:
                   </label>
                   <input
@@ -229,12 +219,12 @@ const Booking: React.FC = () => {
                     min="1"
                     max="20"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Number of Children:
                   </label>
                   <input
@@ -244,12 +234,12 @@ const Booking: React.FC = () => {
                     onChange={handleInputChange}
                     min="0"
                     max="20"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
                     Number of Foreigners:
                   </label>
                   <input
@@ -259,18 +249,18 @@ const Booking: React.FC = () => {
                     onChange={handleInputChange}
                     min="0"
                     max="20"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                   />
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex justify-between items-center text-lg">
-                    <span className="font-semibold">Total Amount:</span>
-                    <span className="text-2xl font-bold text-primary-600">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center text-base">
+                    <span className="font-semibold text-sm">Total Amount:</span>
+                    <span className="text-xl font-bold text-primary-600">
                       ₹{calculateTotal()}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600 mt-2">
+                  <div className="text-xs text-gray-600 mt-1">
                     {bookingData.numberOfAdults > 0 && (
                       <div>Adults: {bookingData.numberOfAdults} × ₹{monument.ticketPrices.adult} = ₹{bookingData.numberOfAdults * monument.ticketPrices.adult}</div>
                     )}
@@ -286,14 +276,14 @@ const Booking: React.FC = () => {
                 <button
                   type="submit"
                   disabled={submitting || calculateTotal() === 0}
-                  className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-semibold py-4 px-6 rounded-lg text-lg transition-colors duration-200 flex items-center justify-center"
+                  className="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-semibold py-3 px-4 rounded-lg text-base transition-colors duration-200 flex items-center justify-center mt-4"
                 >
                   {submitting ? (
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   ) : (
                     <>
                       Proceed to Payment
-                      <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </>
