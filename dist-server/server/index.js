@@ -177,9 +177,9 @@ const corsOptions = {
         const allowedOrigins = [
             'https://yaatrasarthi.netlify.app',
             'http://localhost:3000',
-            'http://localhost:5173',
-            'http://localhost:5000',
-            'https://yaatrasarthi.onrender.com'
+'http://localhost:5173',
+'http://localhost:5000',
+'https://yaatrasarthi.onrender.com'
         ];
         console.log('Request origin:', origin);
         // Allow requests with no origin (like mobile apps, curl, or server-to-server requests)
