@@ -41,7 +41,8 @@ const Booking: React.FC = () => {
   const fetchMonument = async () => {
     try {
       const response = await monumentsAPI.getById(monumentId!)
-      setMonument(response.data)
+      console.log('Monument API Response:', response)
+      setMonument(response)
     } catch (error) {
       console.error('Error fetching monument:', error)
       navigate('/explore')
@@ -137,8 +138,8 @@ const Booking: React.FC = () => {
       <div className="absolute inset-0 bg-black bg-opacity-60"></div>
       
       <div className="relative z-10 py-8">
-        <div className="max-w-7xl mx-100% px-10 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start ml-20 mr-20 py-8 ">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start py-8">
             {/* Left Side - Monument Info */}
             <div className="text-white">
               <div className="">
@@ -152,7 +153,7 @@ const Booking: React.FC = () => {
                   Back to Explore
                 </button>
                 
-                <h1 className="text-3xl md:text-3xl font-bold   ">
+                <h1 className="text-3xl md:text-3xl font-bold">
                   {monument.name}
                 </h1>
                 <p className="text-xl mb-6 flex items-center">
@@ -165,7 +166,7 @@ const Booking: React.FC = () => {
                   {monument.description}
                 </p>
                 
-                <div className="bg-white bg-opacity-10 rounded-lg p-6 backdrop-blur-sm shadow-lg ">
+                <div className="bg-white bg-opacity-10 rounded-lg p-6 backdrop-blur-sm shadow-lg">
                   <h3 className="text-xl font-semibold mb-4">Ticket Prices</h3> 
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
@@ -186,7 +187,7 @@ const Booking: React.FC = () => {
             </div>
 
             {/* Right Side - Booking Form */}
-            <div className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-2xl backdrop-blur-sm ml-40 overflow-hidden max-h-screen flex flex-col">
+            <div className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-2xl backdrop-blur-sm overflow-hidden max-h-screen flex flex-col">
               <h2 className="text-4xl font-bold text-gray-900 mb-4 text-center">
                 Book Your Tickets Now!
               </h2>

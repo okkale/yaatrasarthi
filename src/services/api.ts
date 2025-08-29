@@ -35,9 +35,31 @@ api.interceptors.response.use(
 export default api
 
 // Export specific API functions
+interface MonumentParams {
+  page?: number;
+  limit?: number;
+  [key: string]: any;
+}
+
 export const monumentsAPI = {
-  getAll: (params?: any) => api.get('/api/monuments', { params }),
-  getById: (id: string) => api.get(`/api/monuments/${id}`)
+  getAll: async (params?: MonumentParams) => {
+    try {
+      const response = await api.get('/api/monuments', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching monuments:', error);
+      throw error;
+    }
+  },
+  getById: async (id: string) => {
+    try {
+      const response = await api.get(`/api/monuments/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching monument ${id}:`, error);
+      throw error;
+    }
+  }
 }
 
 export const authAPI = {

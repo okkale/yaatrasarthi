@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import axios from 'axios'
+import { authAPI } from '../services/api'
 
 interface User {
   _id: string
@@ -36,56 +36,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       fetchUser()
     } else {
       setLoading(false)
     }
   }, [])
 
-  // Determine API base URL based on environment
-  const getApiBaseUrl = () => {
-    // In production, use the environment variable VITE_API_URL
-    // In development, use relative URLs (will be proxied)
-    // @ts-ignore
-    return import.meta.env.VITE_API_URL || '';
-  };
-
-  const apiBaseUrl = getApiBaseUrl();
-
   const fetchUser = async () => {
     try {
-      const response = await axios.get(`${apiBaseUrl}/api/user/me`)
+      const response = await authAPI.getMe()
       setUser(response.data)
     } catch (error) {
       localStorage.removeItem('token')
-      delete axios.defaults.headers.common['Authorization']
     } finally {
       setLoading(false)
     }
   }
 
   const login = async (email: string, password: string) => {
-    const response = await axios.post(`${apiBaseUrl}/api/auth/login`, { email, password })
+    const response = await authAPI.login({ email, password })
     const { token, user } = response.data
     
     localStorage.setItem('token', token)
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
     setUser(user)
   }
 
   const signup = async (name: string, email: string, password: string) => {
-    const response = await axios.post(`${apiBaseUrl}/api/auth/register`, { name, email, password })
+    const response = await authAPI.register({ name, email, password })
     const { token, user } = response.data
     
     localStorage.setItem('token', token)
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
     setUser(user)
   }
 
   const logout = () => {
     localStorage.removeItem('token')
-    delete axios.defaults.headers.common['Authorization']
     setUser(null)
   }
 

@@ -29,7 +29,7 @@ const Home: React.FC = () => {
   const fetchPopularMonuments = async () => {
     try {
       const response = await monumentsAPI.getAll({ limit: 6 })
-      setMonuments(response.data)
+      setMonuments(response)
     } catch (error) {
       console.error('Error fetching monuments:', error)
     } finally {

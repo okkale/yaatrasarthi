@@ -48,7 +48,8 @@ const Explore: React.FC = () => {
   const fetchMonuments = async () => {
     try {
       const response = await monumentsAPI.getAll()
-      setMonuments(response.data)
+      console.log('API Response:', response)
+      setMonuments(response)
     } catch (error) {
       console.error('Error fetching monuments:', error)
     } finally {
@@ -141,7 +142,7 @@ const Explore: React.FC = () => {
           </div>
 
           {/* Results */}
-          {loading ? (
+{loading ? (
             <div className="flex justify-center py-20">
               <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600"></div>
             </div>
@@ -149,7 +150,7 @@ const Explore: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-semibold text-white">
-                  {filteredMonuments.length} monument{filteredMonuments.length !== 1 ? 's' : ''} found
+                  {(filteredMonuments?.length ?? 0)} monument{(filteredMonuments?.length ?? 0) !== 1 ? 's' : ''} found
                 </h2>
                 <button
                   onClick={() => {
@@ -163,7 +164,7 @@ const Explore: React.FC = () => {
                 </button>
               </div>
 
-              {filteredMonuments.length === 0 ? (
+              {(filteredMonuments?.length ?? 0) === 0 ? (
                 <div className="text-center py-20">
                   <div className="text-6xl mb-4">🏛️</div>
                   <h3 className="text-2xl font-semibold text-white mb-2">No monuments found</h3>
@@ -171,7 +172,7 @@ const Explore: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {filteredMonuments.map(monument => (
+                  {(filteredMonuments || []).map(monument => (
                     <div key={monument._id} className="card animate-fade-in">
                       <div className="relative h-64 rounded-t-xl overflow-hidden">
                         <img

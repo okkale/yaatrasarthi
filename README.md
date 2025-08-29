@@ -1,4 +1,4 @@
-# MonumentPass - Historical Monument Ticket Booking Website
+# YaatraSarthi - Historical Monument Ticket Booking Website
 
 A full-stack web application for booking tickets to historical monuments in India, built with React, TypeScript, Node.js, Express, and MongoDB.
 
@@ -34,6 +34,60 @@ A full-stack web application for booking tickets to historical monuments in Indi
 - **bcryptjs** for password hashing
 - **express-validator** for input validation
 
+## Environment Setup
+
+### Environment Variables
+
+The application uses environment variables for configuration. Create the following files:
+
+#### 1. `.env.example` (Template - included in repository)
+```bash
+# Copy this file to .env.local for local development
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database Configuration
+MONGODB_URI=mongodb://localhost:27017/yaatrasarthi
+
+# JWT Configuration  
+JWT_SECRET=your-super-secret-jwt-key-here-change-in-production
+
+# Client Configuration (for Vite)
+VITE_API_URL=http://localhost:5000
+```
+
+#### 2. `.env.local` (Local Development - gitignored)
+```bash
+# YaatraSarthi Local Development Environment
+# This file is gitignored - use for local development only
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database Configuration
+MONGODB_URI=mongodb://localhost:27017/yaatrasarthi
+
+# JWT Configuration
+JWT_SECRET=local-development-jwt-secret-key-change-this-in-production
+
+# Client Configuration (for Vite)
+VITE_API_URL=http://localhost:5000
+```
+
+### Required Environment Variables
+
+#### Server-side (Backend)
+- `MONGODB_URI`: MongoDB connection string (required)
+- `JWT_SECRET`: JWT secret key for authentication (required)
+- `PORT`: Server port (optional, defaults to 5000)
+- `NODE_ENV`: Environment mode (development/production)
+
+#### Client-side (Frontend)
+- `VITE_API_URL`: API base URL for production deployments
+
 ## Getting Started
 
 ### Prerequisites
@@ -46,7 +100,7 @@ A full-stack web application for booking tickets to historical monuments in Indi
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd monumentpass
+   cd yaatrasarthi
    ```
 
 2. **Install dependencies**
@@ -54,20 +108,20 @@ A full-stack web application for booking tickets to historical monuments in Indi
    npm install
    ```
 
-3. **Environment Setup**
+3. **Setup Environment Variables**
    
-   The `.env` file is already configured with default values:
+   Copy the example environment file:
+   ```bash
+   cp .env.example .env.local
    ```
-   MONGODB_URI=mongodb://localhost:27017/monumentpass
-   JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-   NODE_ENV=development
-   ```
-
-   **Important**: Change the `JWT_SECRET` to a strong, unique value in production.
+   
+   Edit `.env.local` with your configuration:
+   - Update `MONGODB_URI` for your MongoDB instance
+   - Change `JWT_SECRET` to a strong, unique value
 
 4. **Database Setup**
    
-   Ensure MongoDB is running locally, or update the `MONGODB_URI` in `.env` to point to your MongoDB Atlas cluster.
+   Ensure MongoDB is running locally, or update the `MONGODB_URI` in `.env.local` to point to your MongoDB Atlas cluster.
 
 5. **Start the application**
    ```bash
@@ -90,6 +144,19 @@ The application automatically seeds the database with sample monuments when star
 - Mysore Palace
 - Qutub Minar
 
+## Deployment
+
+### Backend Deployment (Render/Heroku)
+Set these environment variables in your deployment platform:
+- `MONGODB_URI`: Your MongoDB Atlas connection string
+- `JWT_SECRET`: Strong JWT secret key
+- `PORT`: 10000 (Render) or 5000 (Heroku)
+- `NODE_ENV`: production
+
+### Frontend Deployment (Netlify/Vercel)
+Set this environment variable:
+- `VITE_API_URL`: URL of your deployed backend (e.g., https://your-backend.onrender.com)
+
 ## API Endpoints
 
 ### Authentication
@@ -108,10 +175,11 @@ The application automatically seeds the database with sample monuments when star
 ## Project Structure
 
 ```
-monumentpass/
+yaatrasarthi/
 ├── src/
 │   ├── components/
-│   │   └── Navbar.tsx
+│   │   ├── Navbar.tsx
+│   │   └── bot.tsx
 │   ├── contexts/
 │   │   └── AuthContext.tsx
 │   ├── pages/
@@ -119,7 +187,12 @@ monumentpass/
 │   │   ├── Home.tsx
 │   │   ├── Explore.tsx
 │   │   ├── Booking.tsx
+│   │   ├── Monuments.tsx
 │   │   └── Dashboard.tsx
+│   ├── services/
+│   │   └── api.ts
+│   ├── config/
+│   │   └── api.ts
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
@@ -128,6 +201,8 @@ monumentpass/
 ├── package.json
 ├── vite.config.ts
 ├── tailwind.config.js
+├── .env.example
+├── .env.local (gitignored)
 └── README.md
 ```
 
@@ -177,9 +252,10 @@ monumentpass/
 ## Available Scripts
 
 - `npm run dev` - Start both client and server in development mode
-- `npm run client` - Start only the frontend development server
-- `npm run server` - Start only the backend server
-- `npm run build` - Build the project for production
+- `npm run dev:server` - Start only the backend server
+- `npm run build` - Build the frontend for production
+- `npm run build:server` - Build the backend for production
+- `npm start` - Start the production server
 - `npm run preview` - Preview the production build
 
 ## Contributing

@@ -5,44 +5,110 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
+
 // Load environment variables
+// Uses .env file by default (standard dotenv behavior)
 dotenv.config();
+
 const validateEnvironment = () => {
     const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
     const missing = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    
     if (missing.length > 0) {
-        console.error('Missing required environment variables:', missing);
-        console.error('Please set the following environment variables:');
-        missing.forEach(envVar => console.error(`- ${envVar}`));
+        console.error('❌ Missing required environment variables:', missing);
+        console.error('💡 Please set the following environment variables:');
+        missing.forEach(envVar => console.error(`   - ${envVar}`));
+        console.error('📁 Create a .env.local file based on .env.example for local development');
+        console.error('🌐 For production, set these variables in your deployment platform');
         process.exit(1);
     }
+
+    // Validate MongoDB URI format
+    if (process.env.MONGODB_URI && !process.env.MONGODB_URI.startsWith('mongodb')) {
+        console.error('❌ Invalid MONGODB_URI format. Must start with "mongodb"');
+        process.exit(1);
+    }
+
+    // Warn about weak JWT secret in production
+    if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+        console.warn('⚠️  Warning: JWT_SECRET is shorter than 32 characters. Consider using a stronger secret for production.');
+    }
 };
+
 // Validate environment variables
 validateEnvironment();
+
 const app = express();
 const PORT = process.env.PORT || 5000;
-// Middleware - JSON parsing only (CORS configured later)
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Middleware
 app.use(express.json());
-// MongoDB connection
+
+// MongoDB connection with enhanced status logging
 const connectDB = async () => {
     try {
         const uri = process.env.MONGODB_URI;
-        if (!uri)
-            throw new Error('MONGODB_URI is required');
-        console.log('Attempting to connect to MongoDB...');
+        if (!uri) throw new Error('MONGODB_URI is required');
+
+        console.log('🔄 Attempting to connect to MongoDB...');
+        
+        // MongoDB connection event listeners
+        mongoose.connection.on('connecting', () => {
+            console.log('🔄 Connecting to MongoDB...');
+        });
+
+        mongoose.connection.on('connected', () => {
+            console.log('✅ MongoDB connected successfully!');
+            console.log(`📍 Connected to: ${mongoose.connection.name}`);
+        });
+
+        mongoose.connection.on('error', (error) => {
+            console.error('❌ MongoDB connection error:', error);
+        });
+
+        mongoose.connection.on('disconnected', () => {
+            console.log('⚠️  MongoDB disconnected');
+        });
+
+        mongoose.connection.on('reconnected', () => {
+            console.log('🔄 MongoDB reconnected');
+        });
+
         await mongoose.connect(uri, {
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000,
         });
-        console.log('MongoDB connected successfully');
-    }
-    catch (error) {
-        console.error('MongoDB connection error:', error);
+
+        // Validate initial database initialization after successful connection
+        await initializeDatabaseStatus();
+
+    } catch (error) {
+        console.error('❌ MongoDB connection failed:', error);
         process.exit(1);
     }
 };
-// Call it after express setup
+
+// Function to check and display database initialization status
+const initializeDatabaseStatus = async () => {
+    try {
+        // Check if collections exist and have data
+        if (mongoose.connection.db) {
+            const collections = await mongoose.connection.db.listCollections().toArray();
+            console.log('📊 Available collections:', collections.map(c => c.name));
+        }
+
+        // Database verification will be handled by initializeData function later
+        console.log('🔍 Database initialization will be checked after schema setup...');
+        
+    } catch (error) {
+        console.error('⚠️  Error checking database status:', error);
+    }
+};
+
+// Call database connection
 await connectDB();
+
 // User Schema
 const userSchema = new mongoose.Schema({
     name: {
@@ -65,7 +131,9 @@ const userSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
 const User = mongoose.model('User', userSchema, 'app_users');
+
 // Monument Schema
 const monumentSchema = new mongoose.Schema({
     name: {
@@ -107,7 +175,9 @@ const monumentSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
 const Monument = mongoose.model('Monument', monumentSchema, 'app_monuments');
+
 // Booking Schema
 const bookingSchema = new mongoose.Schema({
     userId: {
@@ -150,50 +220,48 @@ const bookingSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
 const Booking = mongoose.model('Booking', bookingSchema, 'app_bookings');
+
 // Auth middleware
-const authenticateToken = async (req, res, next) => {
+const authenticateToken = async (req: any, res: any, next: any) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
+
     if (!token) {
         return res.status(401).json({ message: 'Access token required' });
     }
+
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
         const user = await User.findById(decoded.userId).select('-password');
         if (!user) {
             return res.status(401).json({ message: 'Invalid token' });
         }
         req.user = user;
         next();
-    }
-    catch (error) {
+    } catch (error) {
         res.status(403).json({ message: 'Invalid token' });
     }
 };
+
 // CORS configuration
 const corsOptions = {
-    origin: function (origin, callback) {
+    origin: function (origin: any, callback: any) {
         const allowedOrigins = [
             'https://yaatrasarthi.netlify.app',
             'http://localhost:3000',
+            'http://localhost:3001',
+            'http://localhost:3002',
             'http://localhost:5173',
-            'http://localhost:5000',
-            'https://yaatrasarthi.onrender.com'
+            'http://localhost:5000'
         ];
-        console.log('Request origin:', origin);
-        // Allow requests with no origin (like mobile apps, curl, or server-to-server requests)
-        if (!origin) {
-            console.log('No origin - allowing request');
-            return callback(null, true);
-        }
+
+        if (!origin) return callback(null, true);
+
         if (allowedOrigins.includes(origin)) {
-            console.log('Origin allowed:', origin);
             callback(null, true);
-        }
-        else {
-            console.log('Origin blocked:', origin);
-            console.log('Allowed origins:', allowedOrigins);
+        } else {
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -203,16 +271,17 @@ const corsOptions = {
     optionsSuccessStatus: 200,
     preflightContinue: false
 };
-// Apply CORS before all routes
+
 app.use(cors(corsOptions));
-// Handle preflight requests explicitly
 app.options('*', cors(corsOptions));
+
 // Request logging middleware
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('origin') || 'none'}`);
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
 });
-// Health check endpoint for deployment platforms
+
+// Health check endpoint
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'OK',
@@ -220,6 +289,7 @@ app.get('/health', (req, res) => {
         mongoStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
     });
 });
+
 // Root endpoint
 app.get('/', (req, res) => {
     res.json({
@@ -228,34 +298,38 @@ app.get('/', (req, res) => {
         version: '1.0.0'
     });
 });
+
 // Auth routes
 app.post('/api/auth/register', [
     body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
     body('email').isEmail().withMessage('Please provide a valid email'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
-], async (req, res) => {
+], async (req: any, res: any) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ message: errors.array()[0].msg });
         }
+
         const { name, email, password } = req.body;
-        // Check if user already exists
+
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: 'User already exists with this email' });
         }
-        // Hash password
+
         const hashedPassword = await bcrypt.hash(password, 12);
-        // Create user
+
         const user = new User({
             name,
             email,
             password: hashedPassword
         });
+
         await user.save();
-        // Generate JWT token
+
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '7d' });
+
         res.status(201).json({
             message: 'User created successfully',
             token,
@@ -265,34 +339,36 @@ app.post('/api/auth/register', [
                 email: user.email
             }
         });
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 app.post('/api/auth/login', [
     body('email').isEmail().withMessage('Please provide a valid email'),
     body('password').exists().withMessage('Password is required')
-], async (req, res) => {
+], async (req: any, res: any) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ message: errors.array()[0].msg });
         }
+
         const { email, password } = req.body;
-        // Find user
+
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-        // Check password
+
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-        // Generate JWT token
+
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '7d' });
+
         res.json({
             message: 'Login successful',
             token,
@@ -302,34 +378,30 @@ app.post('/api/auth/login', [
                 email: user.email
             }
         });
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 // User routes
-app.get('/api/user/me', authenticateToken, async (req, res) => {
+app.get('/api/user/me', authenticateToken, async (req: any, res: any) => {
     try {
         res.json(req.user);
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Get user error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 // Monument routes
-app.get('/api/monuments', async (req, res) => {
+app.get('/api/monuments', async (req: any, res: any) => {
     try {
-        console.log('GET /api/monuments called with query:', req.query);
         const { limit, state, city, search } = req.query;
-        let query = {};
-        if (state) {
-            query = { ...query, 'location.state': state };
-        }
-        if (city) {
-            query = { ...query, 'location.city': city };
-        }
+        let query: any = {};
+
+        if (state) query = { ...query, 'location.state': state };
+        if (city) query = { ...query, 'location.city': city };
         if (search) {
             query = {
                 ...query,
@@ -339,34 +411,31 @@ app.get('/api/monuments', async (req, res) => {
                 ]
             };
         }
-        console.log('Monument query:', query);
+
         const monuments = await Monument.find(query)
-            .limit(limit ? parseInt(limit) : 0)
+            .limit(limit ? parseInt(limit as string) : 0)
             .sort({ createdAt: -1 });
-        console.log('Found', monuments.length, 'monuments');
+
         res.json(monuments);
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Get monuments error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-app.get('/api/monuments/:id', async (req, res) => {
+
+app.get('/api/monuments/:id', async (req: any, res: any) => {
     try {
-        console.log('GET /api/monuments/:id called with id:', req.params.id);
         const monument = await Monument.findById(req.params.id);
-        console.log('Found monument:', monument);
         if (!monument) {
-            console.log('Monument not found for id:', req.params.id);
             return res.status(404).json({ message: 'Monument not found' });
         }
         res.json(monument);
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Get monument error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 // Booking routes
 app.post('/api/bookings', authenticateToken, [
     body('monumentId').isMongoId().withMessage('Invalid monument ID'),
@@ -375,24 +444,20 @@ app.post('/api/bookings', authenticateToken, [
     body('numberOfChildren').isInt({ min: 0 }).withMessage('Invalid number of children'),
     body('numberOfForeigners').isInt({ min: 0 }).withMessage('Invalid number of foreigners'),
     body('totalAmount').isFloat({ min: 0 }).withMessage('Invalid total amount')
-], async (req, res) => {
+], async (req: any, res: any) => {
     try {
-        console.log('POST /api/bookings called with body:', req.body);
-        console.log('User from token:', req.user);
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            console.log('Validation errors:', errors.array());
             return res.status(400).json({ message: errors.array()[0].msg });
         }
+
         const { monumentId, visitDate, numberOfAdults, numberOfChildren, numberOfForeigners, totalAmount } = req.body;
-        // Verify monument exists
+
         const monument = await Monument.findById(monumentId);
-        console.log('Found monument for booking:', monument);
         if (!monument) {
-            console.log('Monument not found for booking:', monumentId);
             return res.status(404).json({ message: 'Monument not found' });
         }
-        // Create booking
+
         const booking = new Booking({
             userId: req.user._id,
             monumentId,
@@ -402,144 +467,111 @@ app.post('/api/bookings', authenticateToken, [
             numberOfForeigners,
             totalAmount
         });
+
         await booking.save();
-        console.log('Booking saved:', booking);
-        // Populate monument data for response
         await booking.populate('monumentId');
-        console.log('Booking populated with monument data:', booking);
+
         res.status(201).json({
             message: 'Booking created successfully',
             booking
         });
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Create booking error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-app.get('/api/bookings/my-bookings', authenticateToken, async (req, res) => {
+
+app.get('/api/bookings/my-bookings', authenticateToken, async (req: any, res: any) => {
     try {
-        console.log('GET /api/bookings/my-bookings called for user:', req.user._id);
         const bookings = await Booking.find({ userId: req.user._id })
             .populate('monumentId')
             .sort({ createdAt: -1 });
-        console.log('Found', bookings.length, 'bookings for user');
+
         res.json(bookings);
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Get bookings error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
 // Initialize sample data
 const initializeData = async () => {
     try {
-        // Check if MongoDB is connected
+        // Check MongoDB connection status
         if (mongoose.connection.readyState !== 1) {
-            console.log('MongoDB not connected, skipping data initialization');
+            console.log('⚠️  MongoDB not connected, skipping data initialization');
             return;
         }
-        console.log('MongoDB connected successfully, checking for existing data...');
-        // Check if collections exist and have data
-        if (mongoose.connection.db) {
-            const collections = await mongoose.connection.db.listCollections().toArray();
-            console.log('Available collections:', collections.map(c => c.name));
-        }
-        else {
-            console.log('Database connection not available for listing collections');
-        }
+
+        console.log('🔍 Checking database for existing data...');
+
         const monumentCount = await Monument.countDocuments();
-        console.log(`Found ${monumentCount} monuments in database`);
+        console.log(`📊 Found ${monumentCount} monuments in database`);
+
         if (monumentCount === 0) {
-            console.log('No monuments found, initializing sample data...');
+            console.log('🚀 No monuments found, initializing sample data...');
             const sampleMonuments = [
                 {
                     name: "Taj Mahal",
-                    description: "The Taj Mahal is an ivory-white marble mausoleum on the right bank of the river Yamuna in the Indian city of Agra. It was commissioned in 1632 by the Mughal emperor Shah Jahan to house the tomb of his favourite wife, Mumtaz Mahal.",
+                    description: "The Taj Mahal is an ivory-white marble mausoleum on the right bank of the river Yamuna in the Indian city of Agra.",
                     location: { city: "Agra", state: "Uttar Pradesh" },
-                    imageUrl: "/src/Assets/tajmahal.jpeg",
+                    imageUrl: "https://images.pexels.com/photos/1603650/pexels-photo-1603650.jpeg?auto=compress&cs=tinysrgb&w=800",
                     ticketPrices: { adult: 50, child: 25, foreigner: 1100 }
                 },
                 {
-                    name: "Ajanta Caves",
-                    description: "The Ajanta Caves are about 30 rock-cut Buddhist cave monuments which date from the 2nd century BCE to about 480 CE in Maharashtra, India. The caves include paintings and rock-cut sculptures described as among the finest surviving examples of ancient Indian art.",
-                location: { city: "Aurangabad", state: "Maharashtra" },
-                    imageUrl: "/src/Assets/ajanta.jpeg",
+                    name: "Red Fort",
+                    description: "The Red Fort is a historic fortified palace of the Mughal emperors of India located in Delhi.",
+                    location: { city: "New Delhi", state: "Delhi" },
+                    imageUrl: "https://images.pexels.com/photos/789750/pexels-photo-789750.jpeg?auto=compress&cs=tinysrgb&w=800",
                     ticketPrices: { adult: 35, child: 15, foreigner: 550 }
-                },
-                {
-                    name: "Gateway of India",
-                    description: "The Gateway of India is an arch-monument built in the early twentieth century in the city of Mumbai, in the Indian state of Maharashtra. It was erected to commemorate the landing of King George V and Queen Mary at Apollo Bunder.",
-                    location: { city: "Mumbai", state: "Maharashtra" },
-                    imageUrl: "/src/Assets/Gateway of India.jfif",
-                    ticketPrices: { adult: 25, child: 10, foreigner: 300 }
-                },
-                {
-                    name: "Hawa Mahal",
-                    description: "Hawa Mahal is a palace in the city of Jaipur, India. Built from red and pink sandstone, it is on the edge of the City Palace, Jaipur, and extends to the Zenana, or women's chambers.",
-                    location: { city: "Jaipur", state: "Rajasthan" },
-                    imageUrl: "/src/Assets/havamahal.jpg",
-                    ticketPrices: { adult: 50, child: 20, foreigner: 200 }
-                },
-                {
-                    name: "Elephanta Caves",
-                    description: "The Elephanta Caves are a network of sculpted caves located on Elephanta Island, or Gharapuri, in Mumbai Harbour, 11 km (6.8 mi) to the east of the city of Mumbai in the Indian state of Maharashtra.",
-                    location: { city: "Mumbai", state: "Maharastra" },
-                    imageUrl: "/src/Assets/Elephanta-Caves.jpg",
-                    ticketPrices: { adult: 70, child: 30, foreigner: 200 }
-                },
-                {
-                    name: "Raigad Fort",
-                    description: "Raigad Fort is a hill fort situated in the Raigad district of Maharashtra, India. The fort was the capital of the Maratha Empire under the rule of Chhatrapati Shivaji Maharaj for almost 26 years",
-                    location: { city: "Raigad", state: "Maharastra" },
-                    imageUrl: "/src/Assets/raigad.jpg",
-                    ticketPrices: { adult: 30, child: 15, foreigner: 550 }
                 }
             ];
+
             await Monument.insertMany(sampleMonuments);
-            console.log('Sample monuments added to database');
+            console.log('✅ Sample monuments added to database');
+        } else {
+            console.log('✅ Monuments already exist in database, skipping initialization');
         }
-        else {
-            console.log('Monuments already exist in database, skipping initialization');
-        }
-        // Also check users collection
+
         const userCount = await User.countDocuments();
-        console.log(`Found ${userCount} users in database`);
-        // Also check bookings collection
         const bookingCount = await Booking.countDocuments();
-        console.log(`Found ${bookingCount} bookings in database`);
-    }
-    catch (error) {
-        console.error('Error initializing data:', error instanceof Error ? error.message : 'Unknown error occurred');
-        console.error('Full error:', error);
+        console.log(`📊 Database status: ${userCount} users, ${bookingCount} bookings`);
+
+    } catch (error) {
+        console.error('❌ Error initializing data:', error);
     }
 };
+
 // Error handling middleware
-app.use((error, req, res, next) => {
+app.use((error: any, req: any, res: any, next: any) => {
     console.error('Unhandled error:', error);
     res.status(500).json({ message: 'Internal server error' });
 });
-// Start server and initialize data
+
+// Start server
 const startServer = async () => {
     try {
         // Initialize data after MongoDB connection is established
         await initializeData();
+
         app.listen(PORT, () => {
-            console.log('=== YaatraSarthi Server Started ===');
-            console.log(`Server running on port ${PORT}`);
-            console.log(`MongoDB URI: ${process.env.MONGODB_URI ? 'Set' : 'Not set'}`);
-            console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not set'}`);
-            console.log(`Server URL: http://localhost:${PORT}`);
-            console.log(`Health check: http://localhost:${PORT}/health`);
-            console.log(`API endpoints: http://localhost:${PORT}/api/monuments`);
-            console.log('===================================');
+            console.log('=================================');
+            console.log('🚀 YaatraSarthi Server Started');
+            console.log('=================================');
+            console.log(`🌐 Server running on port ${PORT}`);
+            console.log(`🗄️  MongoDB: ${mongoose.connection.readyState === 1 ? '✅ Connected' : '❌ Disconnected'}`);
+            console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? '✅ Configured' : '❌ Not set'}`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`📍 Server URL: http://localhost:${PORT}`);
+            console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+            console.log(`📡 API endpoints: http://localhost:${PORT}/api/monuments`);
+            console.log('=================================');
         });
-    }
-    catch (error) {
-        console.error('Failed to start server:', error);
+
+    } catch (error) {
+        console.error('❌ Failed to start server:', error);
         process.exit(1);
     }
 };
+
 startServer();
-//# sourceMappingURL=index.js.map
